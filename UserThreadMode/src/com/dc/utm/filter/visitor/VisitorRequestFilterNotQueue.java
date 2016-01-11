@@ -1,20 +1,32 @@
 package com.dc.utm.filter.visitor;
 
-import com.dc.qtm.IExceptionListener;
 import com.dc.qtm.handle.IRequestHandler;
 import com.dc.qtm.thread.pool.LimitedUnboundedThreadPoolExecutor;
+import com.dc.utm.event.EventManager;
 
+/**
+ * 
+ * 基本的游客请求过滤器，没有进行什么处理，直接调用线程池去处理该请求
+ * 
+ * @author Daemon
+ *
+ * @param <CmdType> cmd
+ * @param <ConnectKey> 游客Id
+ * @param <Visitor> 游客
+ */
 public class VisitorRequestFilterNotQueue<CmdType, ConnectKey, Visitor> 
 	implements IVisitorRequestFilter<CmdType, ConnectKey, Visitor> {
 
 	protected final LimitedUnboundedThreadPoolExecutor pool;
-	protected final IExceptionListener exceptionListener;
+	@SuppressWarnings("rawtypes")
+	protected final EventManager eventManage;
 	
+	@SuppressWarnings("rawtypes")
 	public VisitorRequestFilterNotQueue( LimitedUnboundedThreadPoolExecutor pool,
-			IExceptionListener exceptionListener ) {
+			EventManager eventManage ) {
 		
 		this.pool = pool;
-		this.exceptionListener = exceptionListener;
+		this.eventManage = eventManage;
 		
 	}
 	
@@ -39,6 +51,12 @@ public class VisitorRequestFilterNotQueue<CmdType, ConnectKey, Visitor>
 		
 	}
 	
+	/**
+	 * 处理游客请求的线程的执行类
+	 * 
+	 * @author Daemon
+	 *
+	 */
 	class VisitorRunnable implements Runnable {
 		
 		final ConnectKey connectKey;
@@ -70,7 +88,7 @@ public class VisitorRequestFilterNotQueue<CmdType, ConnectKey, Visitor>
 					handler.before(requestId, visitor, param);
 					
 				} catch (Exception e) {
-					exceptionListener.exception(e);
+					eventManage.getExceptionLogger().exception(e);
 				}
 				
 				try {
@@ -78,7 +96,7 @@ public class VisitorRequestFilterNotQueue<CmdType, ConnectKey, Visitor>
 					handler.handlerRequest(requestId, visitor, param);
 					
 				} catch (Exception e) {
-					exceptionListener.exception(e);
+					eventManage.getExceptionLogger().exception(e);
 				}
 
 				try {
@@ -86,12 +104,12 @@ public class VisitorRequestFilterNotQueue<CmdType, ConnectKey, Visitor>
 					handler.after(requestId, visitor, param);
 					
 				} catch (Exception e) {
-					exceptionListener.exception(e);
+					eventManage.getExceptionLogger().exception(e);
 				}
 				
 			} catch (Exception e) {
 				
-				exceptionListener.exception(e);
+				eventManage.getExceptionLogger().exception(e);
 				
 			}
 			
