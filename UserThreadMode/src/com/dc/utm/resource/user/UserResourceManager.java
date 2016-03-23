@@ -1,5 +1,9 @@
 package com.dc.utm.resource.user;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import com.dc.qtm.thread.pool.LimitedUnboundedThreadPoolExecutor;
 import com.dc.utm.center.UserCenter;
 import com.dc.utm.entity.IBaseUser;
@@ -73,4 +77,27 @@ public class UserResourceManager<ConnectKey, Visitor, UserKey, User extends IBas
 		
 		return userObjResource;
 	}
+	
+	/**
+	 * 获得 资源名称 对应 每个资源活跃的用户个数
+	 * 
+	 * @return 资源名称 对应 每个资源活跃的用户个数
+	 */
+	public Map<String, Integer> getResourceNameMapActiveNum() {
+		
+		List<IUserResource<Visitor, UserKey, User>> userResourceList = userResourceCenter.getUserResourceList();
+		
+		HashMap<String, Integer> resourceNameMapActiveNum = new HashMap<String, Integer>(userResourceList.size()<<1);
+		
+		for( IUserResource<Visitor, UserKey, User> resource : userResourceList ) {
+			
+			resourceNameMapActiveNum.put( resource.getName(), resource.getActiveCount() );
+		}
+		
+		return resourceNameMapActiveNum;
+	}
 }
+
+
+
+

@@ -15,13 +15,13 @@ import com.dc.utm.entity.IBaseUser;
  * @author Daemon
  *
  */
-public class SimpleLocalUserFlagBusiness extends UserFlagBusiness<Object, Object, IBaseUser<Object>> {
+public class SimpleLocalUserFlagBusiness<Visitor, UserKey, User extends IBaseUser<UserKey>> extends UserFlagBusiness<Visitor, UserKey, User> {
 
-	protected final ConcurrentHashMap<Object, Object> userIdSet = new ConcurrentHashMap<Object, Object>();
+	protected final ConcurrentHashMap<UserKey, UserKey> userIdSet = new ConcurrentHashMap<UserKey, UserKey>();
 	
 	@Override
-	public SetLoginFlagResult setLoginFlag(int requestId, Object visitor,
-			IBaseUser<Object> user, Object param) {
+	public SetLoginFlagResult setLoginFlag(int requestId, Visitor visitor,
+			User user, Object param) {
 
 		Object old = userIdSet.putIfAbsent(user.getUserKey(), user.getUserKey());
 		
@@ -33,14 +33,14 @@ public class SimpleLocalUserFlagBusiness extends UserFlagBusiness<Object, Object
 	}
 
 	@Override
-	public void rollBackLoginFlagWhenLinkDisable(int requestId, IBaseUser<Object> user,
+	public void rollBackLoginFlagWhenLinkDisable(int requestId, User user,
 			Object param) {
 		
 		userIdSet.remove(user.getUserKey());
 	}
 
 	@Override
-	public void removeLoginFlag(int requestId, IBaseUser<Object> user, Object param) {
+	public void removeLoginFlag(int requestId, User user, Object param) {
 
 		userIdSet.remove(user.getUserKey());
 	}
@@ -60,7 +60,7 @@ public class SimpleLocalUserFlagBusiness extends UserFlagBusiness<Object, Object
 	 * 
 	 * @return 存放登录用户的ConcurrentHashMap
 	 */
-	public ConcurrentHashMap<Object, Object> getUserIdSet() {
+	public ConcurrentHashMap<UserKey, UserKey> getUserIdSet() {
 		
 		return userIdSet;
 	}

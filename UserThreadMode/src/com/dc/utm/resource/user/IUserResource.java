@@ -14,6 +14,13 @@ import java.util.Set;
 public interface IUserResource<Visitor, UserKey, User> extends IUserResourceEvent<Visitor, UserKey, User> {
 	
 	/**
+	 * 返回用户资源的名称
+	 * 
+	 * @return 户资源的名称
+	 */
+	String getName();
+	
+	/**
 	 * 返回正在打开的资源数量（为监控预留接口）
 	 * 
 	 * @return 正在打开的资源数量
@@ -21,10 +28,11 @@ public interface IUserResource<Visitor, UserKey, User> extends IUserResourceEven
 	int getActiveCount();
 	
 	/**
-	 * 返回正在打开的资源所属的用户Id（为监控预留接口）
+	 * 返回正在打开的资源所属的用户的信息（为监控预留接口）
 	 * 
-	 * @return 正在打开的资源所属的用户Id
+	 * @return 正在打开的资源所属的用户的信息（Id或者name）
 	 */
-	Set<UserKey> getAciveUserId();
+	@SuppressWarnings("rawtypes")
+	Set getAciveUserInfo();
 	
 }

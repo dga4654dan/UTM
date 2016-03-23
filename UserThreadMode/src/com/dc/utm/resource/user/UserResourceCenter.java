@@ -65,7 +65,6 @@ public class UserResourceCenter<Visitor, UserKey, User> implements IUserResource
 	
 	
 	
-	
 	/**
 	 * 分发事件：游客申请登录（在onUserLoginCheck.before中被调用）
 	 * 

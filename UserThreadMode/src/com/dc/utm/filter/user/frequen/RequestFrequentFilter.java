@@ -68,6 +68,29 @@ public class RequestFrequentFilter<CmdType, ConnectKey, Visitor, UserKey, User e
 			IRequestHandler handler, int requestId, Object param) {
 		
 		UserRequestFrequentInfo userRequestFrequentInfo = getUserRequestFrequentInfo(key);
+		if( userRequestFrequentInfo == null ) {
+			
+			if( handler instanceof com.dc.utm.handler.logout.OnUserDisconectHandler && !user.isLogining() ) {
+				
+				//没有登录则认为用户已经断开连接或者退出，不予处理
+				//（eg：用户 "退出登录" 后   "断线"，程序先将"退出登录"放入任务队列中，然后再将"断线"放入任务队列中，
+				//则断线处理有可能找不到“用户请求信息记录”，因为可能在退出的处理线程中已经将它回收）
+				
+//				System.out.println(user.getUserKey() + ":" + handler.getClass().getSimpleName() + " abandon when user logouted");
+				return;
+			}
+			
+			//给用户创建 “用户请求信息记录”，并提示可能资源管理有问题
+			
+			eventManager.getExceptionLogger().erroState("160107_79 can't find userRequestFrequentInfo for user:" + key 
+					+ "(mean userRequestFrequentInfo reasource has problem), create one for now, userId:" + user.getUserKey() 
+					+ " userIsLogin:" + user.isLogining() + " user:" + user + " handler:" + handler + " param:" + param);
+			
+			userRequestFrequentInfo = new UserRequestFrequentInfo( new RingLongRecord(ringSize) );
+			UserRequestFrequentInfo old = userKeyMapRequestInfo.putIfAbsent(key, userRequestFrequentInfo);
+			if( old != null )
+				userRequestFrequentInfo = old;
+		}
 		
 		long timeNow = System.currentTimeMillis();
 		
@@ -144,7 +167,7 @@ public class RequestFrequentFilter<CmdType, ConnectKey, Visitor, UserKey, User e
 	}
 	
 	/**
-	 * 获得用户的 “用户请求信息记录”，如果找不到则会生成一个保证程序正常运行（意味着没有正确的创建该资源）
+	 * 获得用户的 “用户请求信息记录”
 	 * 
 	 * @param key 用户Id
 	 * @return 用户请求信息记录
@@ -152,20 +175,6 @@ public class RequestFrequentFilter<CmdType, ConnectKey, Visitor, UserKey, User e
 	protected UserRequestFrequentInfo getUserRequestFrequentInfo(UserKey key) {
 		
 		UserRequestFrequentInfo userRequestFrequentInfo = userKeyMapRequestInfo.get(key);
-		if( userRequestFrequentInfo == null ) {
-			
-			/*
-			 * 如果找不到则会生成一个保证程序正常运行（意味着没有正确的创建该资源）
-			 */
-			eventManager.getExceptionLogger().erroState("160107_160 can't find userRequestFrequentInfo for user:" 
-					+ key + "(mean userRequestFrequentInfo reasource has problem), create one for now");
-			
-			userRequestFrequentInfo = new UserRequestFrequentInfo( new RingLongRecord(ringSize) );
-			UserRequestFrequentInfo old = userKeyMapRequestInfo.putIfAbsent(key, userRequestFrequentInfo);
-			if( old != null )
-				userRequestFrequentInfo = old;
-		}
-		
 		return userRequestFrequentInfo;
 	}
 	
@@ -239,12 +248,16 @@ public class RequestFrequentFilter<CmdType, ConnectKey, Visitor, UserKey, User e
 		return userKeyMapRequestInfo.size();
 	}
 
+	@SuppressWarnings("rawtypes")
 	@Override
-	public Set<UserKey> getAciveUserId() {
+	public Set getAciveUserInfo() {
 		
 		return userKeyMapRequestInfo.keySet();
 	}
 
-
+	@Override
+	public String getName() {
+		return "UserRequestInfo";
+	}
 	
 }

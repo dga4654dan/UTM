@@ -52,6 +52,22 @@ public class UserThreadMode<CmdType, ConnectKey, Visitor, UserKey, User extends 
 	
 	
 	
+	/**
+	 * 
+	 * UTM最基本的构造方法，传入所有的组件
+	 * 
+	 * 
+	 * @param login login Cmd
+	 * @param disconect disconect Cmd
+	 * @param eventManager 事件管理器
+	 * @param visitorCmdMapHandler 游客Cmd对应处理器的Map
+	 * @param userCmdMapHandler 用户Cmd对应处理器的Map
+	 * @param userCenter 用户中心（存放用户）
+	 * @param visitorRequestFilter 游客请求过滤器
+	 * @param userRequestFilter 用户请求过滤器
+	 * @param userResourceManager 用户资源管理器
+	 * @param userThreadModeFilter UTM过滤器
+	 */
 	@SuppressWarnings("rawtypes")
 	public UserThreadMode(
 			CmdType login,
@@ -77,9 +93,79 @@ public class UserThreadMode<CmdType, ConnectKey, Visitor, UserKey, User extends 
 		this.userResourceManager = userResourceManager;
 		this.userThreadModeFilter = userThreadModeFilter;
 	}
-
+	
+	/**
+	 * 
+	 * 自动设置以下属性：
+	 * 
+	 * visitorRequestFilter使用默认实现VisitorRequestFilterNotQueue
+	 * userResourceCenter使用默认实现UserResourceCenter
+	 * userResourceManager使用默认实现UserResourceManager
+	 * userRequestFilter使用默认实现RequestFrequentFilter
+	 * userThreadModeFilter使用默认实现UserThreadModeFilter
+	 * 
+	 * 
+	 * @param login login Cmd
+	 * @param disconect disconect Cmd
+	 * @param visitorCmdMapHandler 游客Cmd对应处理器的Map
+	 * @param userCmdMapHandler 用户Cmd对应处理器的Map
+	 * @param pool 线程池
+	 * @param userCenter 用户中心（存放用户）
+	 * @param eventManager 事件管理器
+	 */
 	@SuppressWarnings("rawtypes")
-	public UserThreadMode( int corePoolSize, int limitedQueueSize,
+	public UserThreadMode(
+			CmdType login, CmdType disconect,
+			Map<CmdType, IRequestHandler> visitorCmdMapHandler,
+			Map<CmdType, IRequestHandler> userCmdMapHandler,
+			LimitedUnboundedThreadPoolExecutor pool,
+			UserCenter<UserKey, User> userCenter,
+			EventManager<CmdType, ConnectKey, Visitor, UserKey, User> eventManager ) {
+		
+		this.eventManager = eventManager;
+		
+		this.login = login;
+		this.disconect = disconect;
+		this.visitorCmdMapHandler = visitorCmdMapHandler;
+		this.userCmdMapHandler = userCmdMapHandler;
+		
+		this.userCenter = userCenter;
+		this.visitorRequestFilter = new VisitorRequestFilterNotQueue<CmdType, ConnectKey, Visitor>( pool, eventManager );
+		
+		UserResourceCenter<Visitor, UserKey, User> userResourceCenter = new UserResourceCenter<Visitor, UserKey, User>(eventManager);
+		this.userResourceManager = new UserResourceManager<ConnectKey, Visitor, UserKey, User>(userCenter, userResourceCenter, pool, eventManager);
+		
+		RequestFrequentFilter<CmdType, ConnectKey, Visitor, UserKey, User> userRequestFilter 
+			= new RequestFrequentFilter<CmdType, ConnectKey, Visitor, UserKey, User>( 4000, 20, 20, 
+					eventManager, userResourceManager.getUserQueueResource() );
+		this.userRequestFilter = userRequestFilter;
+		userResourceCenter.addUserResource(userRequestFilter);
+		
+		userThreadModeFilter = new UserThreadModeFilter<CmdType, ConnectKey, Visitor, UserKey, User>(login, disconect, eventManager, 
+				visitorCmdMapHandler, userCmdMapHandler, userCenter, visitorRequestFilter, userRequestFilter);
+	}
+
+	/**
+	 * 
+	 * 自动设置以下属性：
+	 * 
+	 * userCenter使用默认实现UserCenter
+	 * visitorRequestFilter使用默认实现VisitorRequestFilterNotQueue
+	 * userResourceCenter使用默认实现UserResourceCenter
+	 * userResourceManager使用默认实现UserResourceManager
+	 * userRequestFilter使用默认实现RequestFrequentFilter
+	 * userThreadModeFilter使用默认实现UserThreadModeFilter
+	 * 
+	 * 
+	 * @param login login Cmd
+	 * @param disconect disconect Cmd
+	 * @param visitorCmdMapHandler 游客Cmd对应处理器的Map
+	 * @param userCmdMapHandler 用户Cmd对应处理器的Map
+	 * @param pool 线程池
+	 * @param eventManager 事件管理器
+	 */
+	@SuppressWarnings("rawtypes")
+	public UserThreadMode(
 			CmdType login, CmdType disconect,
 			Map<CmdType, IRequestHandler> visitorCmdMapHandler,
 			Map<CmdType, IRequestHandler> userCmdMapHandler,
@@ -109,37 +195,6 @@ public class UserThreadMode<CmdType, ConnectKey, Visitor, UserKey, User extends 
 				visitorCmdMapHandler, userCmdMapHandler, userCenter, visitorRequestFilter, userRequestFilter);
 	}
 	
-	@SuppressWarnings("rawtypes")
-	public UserThreadMode( int corePoolSize, int limitedQueueSize,
-			CmdType login, CmdType disconect,
-			Map<CmdType, IRequestHandler> visitorCmdMapHandler,
-			Map<CmdType, IRequestHandler> userCmdMapHandler,
-			LimitedUnboundedThreadPoolExecutor pool,
-			UserCenter<UserKey, User> userCenter,
-			EventManager<CmdType, ConnectKey, Visitor, UserKey, User> eventManager ) {
-		
-		this.eventManager = eventManager;
-		
-		this.login = login;
-		this.disconect = disconect;
-		this.visitorCmdMapHandler = visitorCmdMapHandler;
-		this.userCmdMapHandler = userCmdMapHandler;
-		
-		this.userCenter = new UserCenter<UserKey, User>();
-		this.visitorRequestFilter = new VisitorRequestFilterNotQueue<CmdType, ConnectKey, Visitor>( pool, eventManager );
-		
-		UserResourceCenter<Visitor, UserKey, User> userResourceCenter = new UserResourceCenter<Visitor, UserKey, User>(eventManager);
-		this.userResourceManager = new UserResourceManager<ConnectKey, Visitor, UserKey, User>(userCenter, userResourceCenter, pool, eventManager);
-		
-		RequestFrequentFilter<CmdType, ConnectKey, Visitor, UserKey, User> userRequestFilter 
-			= new RequestFrequentFilter<CmdType, ConnectKey, Visitor, UserKey, User>( 4000, 20, 20, 
-					eventManager, userResourceManager.getUserQueueResource() );
-		this.userRequestFilter = userRequestFilter;
-		userResourceCenter.addUserResource(userRequestFilter);
-		
-		userThreadModeFilter = new UserThreadModeFilter<CmdType, ConnectKey, Visitor, UserKey, User>(login, disconect, eventManager, 
-				visitorCmdMapHandler, userCmdMapHandler, userCenter, visitorRequestFilter, userRequestFilter);
-	}
 	
 	/**
 	 * 获得登录的cmd

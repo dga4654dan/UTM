@@ -82,10 +82,6 @@ public abstract class OnUserLoginHandler<Visitor, UserKey, User extends IBaseUse
 		boolean loginLinkCheckError = true;
 		try {
 			
-			//这里采取一个先设置登录参数的策略，如果 登录连接检查失败 将会重新设置为logout
-			//因为对于用户的消息处理是线性的，所以这里不会引起其他的问题
-			user.setLogin();
-			
 			//通知资源中心
 			userResourceCenter.beforeLoginLinkCheck(userKey, user);
 			
@@ -119,9 +115,6 @@ public abstract class OnUserLoginHandler<Visitor, UserKey, User extends IBaseUse
 			
 			//通知资源中心 回收用户资源
 			userResourceCenter.failInLoginLinkCheck(userKey, user);
-			
-			//用户 登录连接检查失败，设置用户为未登录
-			user.setLogout();
 			
 			try {
 				

@@ -71,6 +71,17 @@ public class UserThreadModeFilter<CmdType, ConnectKey, Visitor, UserKey, User ex
 	}
 	
 	/**
+	 *  用户断开连接
+	 * 
+	 * @param requestId 请求Id
+	 * @param user 用户
+	 */
+	public void disconnect( int requestId, User user ) {
+		
+		handleUserRequest(requestId, disconect, user, null);
+	}
+	
+	/**
 	 * 
 	 * 游客cmd请求
 	 * 
@@ -127,4 +138,34 @@ public class UserThreadModeFilter<CmdType, ConnectKey, Visitor, UserKey, User ex
 		}
 		
 	}
+	
+	/**
+	 * 
+	 * 用户cmd请求
+	 * 
+	 * @param requestId 请求Id
+	 * @param cmd cmd
+	 * @param user 用户
+	 * @param param 请求参数
+	 */
+	public void handleUserRequest( int requestId, CmdType cmd, User user, Object param ) {
+		
+		if( user != null ) {
+			
+			@SuppressWarnings("rawtypes")
+			IRequestHandler handler = userCmdMapHandler.get(cmd);
+			if( handler == null ) {
+				
+				eventManager.getRequestUnknowCmdHandler().userRequestUnknowCmd(user.getUserKey(), user, cmd, param);
+				
+			} else {
+				
+				userRequestFilter.doFilter(user.getUserKey(), user, handler, requestId, param);
+				
+			}
+			
+		}
+		
+	}
+	
 }

@@ -43,7 +43,7 @@ public abstract class AbstractOutHandler<Visitor, UserKey, User extends IBaseUse
 	@Override
 	public boolean isLimited(int requestId, User user, Param param) {
 		
-		//用户退出登录 或者 用户断线时重要的请求，这里应该因为等待队列过长而被过滤掉
+		//用户退出登录 或者 用户断线时重要的请求，这里不应该因为等待队列过长而被过滤掉
 		return false;
 	}
 
@@ -88,9 +88,6 @@ public abstract class AbstractOutHandler<Visitor, UserKey, User extends IBaseUse
 			}
 			
 			UserKey userKey = user.getUserKey();
-			
-			//设置标志位
-			user.setLogout();
 			
 			//通知资源中心 回收用户资源
 			userResourceCenter.userOut(userKey, user);
