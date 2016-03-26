@@ -31,3 +31,7 @@ Utm的核心qtm本身虽然有一些锁操作，但都是一些小锁块，可�
 Utm可以非常容易得应用在不同的服务端（像SmartFoxServer, Netty等）
 
 
+详情见utm-x.x.x.doc
+
+
+
