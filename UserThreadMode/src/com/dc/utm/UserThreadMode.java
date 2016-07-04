@@ -12,8 +12,11 @@ import com.dc.utm.filter.user.IUserRequestFilter;
 import com.dc.utm.filter.user.frequen.RequestFrequentFilter;
 import com.dc.utm.filter.visitor.IVisitorRequestFilter;
 import com.dc.utm.filter.visitor.VisitorRequestFilterNotQueue;
+import com.dc.utm.manager.UserManager;
+import com.dc.utm.manager.UserQueueManager;
 import com.dc.utm.resource.user.UserResourceCenter;
 import com.dc.utm.resource.user.UserResourceManager;
+import com.dc.utm.user.flag.UserFlagBusiness;
 
 /**
  * 
@@ -50,7 +53,8 @@ public class UserThreadMode<CmdType, ConnectKey, Visitor, UserKey, User extends 
 	
 	protected final UserThreadModeFilter<CmdType, ConnectKey, Visitor, UserKey, User> userThreadModeFilter;
 	
-	
+	protected final UserManager<CmdType, ConnectKey, Visitor, UserKey, User> userManager;
+	protected final UserQueueManager<Visitor, UserKey, User> userQueueManager;
 	
 	/**
 	 * 
@@ -67,6 +71,8 @@ public class UserThreadMode<CmdType, ConnectKey, Visitor, UserKey, User extends 
 	 * @param userRequestFilter 用户请求过滤器
 	 * @param userResourceManager 用户资源管理器
 	 * @param userThreadModeFilter UTM过滤器
+	 * @param userManager 用户管理器
+	 * @param userQueueManager 用户队列管理器
 	 */
 	@SuppressWarnings("rawtypes")
 	public UserThreadMode(
@@ -79,7 +85,9 @@ public class UserThreadMode<CmdType, ConnectKey, Visitor, UserKey, User extends 
 			IVisitorRequestFilter<CmdType, ConnectKey, Visitor> visitorRequestFilter,
 			IUserRequestFilter<CmdType, ConnectKey, Visitor, UserKey, User> userRequestFilter,
 			UserResourceManager<ConnectKey, Visitor, UserKey, User> userResourceManager,
-			UserThreadModeFilter<CmdType, ConnectKey, Visitor, UserKey, User> userThreadModeFilter) {
+			UserThreadModeFilter<CmdType, ConnectKey, Visitor, UserKey, User> userThreadModeFilter,
+			UserManager<CmdType, ConnectKey, Visitor, UserKey, User> userManager,
+			UserQueueManager<Visitor, UserKey, User> userQueueManager ) {
 		
 		super();
 		this.login = login;
@@ -92,6 +100,8 @@ public class UserThreadMode<CmdType, ConnectKey, Visitor, UserKey, User extends 
 		this.userRequestFilter = userRequestFilter;
 		this.userResourceManager = userResourceManager;
 		this.userThreadModeFilter = userThreadModeFilter;
+		this.userManager = userManager;
+		this.userQueueManager = userQueueManager;
 	}
 	
 	/**
@@ -103,6 +113,8 @@ public class UserThreadMode<CmdType, ConnectKey, Visitor, UserKey, User extends 
 	 * userResourceManager使用默认实现UserResourceManager
 	 * userRequestFilter使用默认实现RequestFrequentFilter
 	 * userThreadModeFilter使用默认实现UserThreadModeFilter
+	 * userManager使用默认实现UserManager
+	 * userQueueManager使用默认实现UserQueueManager
 	 * 
 	 * 
 	 * @param login login Cmd
@@ -112,6 +124,8 @@ public class UserThreadMode<CmdType, ConnectKey, Visitor, UserKey, User extends 
 	 * @param pool 线程池
 	 * @param userCenter 用户中心（存放用户）
 	 * @param eventManager 事件管理器
+	 * @param checkTime 用户在checkTime毫秒内最多允许maxCount次请求(详见RequestFrequentFilter类描述)
+	 * @param maxCount 用户在checkTime毫秒内最多允许maxCount次请求(详见RequestFrequentFilter类描述)
 	 */
 	@SuppressWarnings("rawtypes")
 	public UserThreadMode(
@@ -120,7 +134,10 @@ public class UserThreadMode<CmdType, ConnectKey, Visitor, UserKey, User extends 
 			Map<CmdType, IRequestHandler> userCmdMapHandler,
 			LimitedUnboundedThreadPoolExecutor pool,
 			UserCenter<UserKey, User> userCenter,
-			EventManager<CmdType, ConnectKey, Visitor, UserKey, User> eventManager ) {
+			EventManager<CmdType, ConnectKey, Visitor, UserKey, User> eventManager,
+			UserFlagBusiness<Visitor, UserKey, User> userFlagBusiness,
+			int checkTime,
+			int maxCount ) {
 		
 		this.eventManager = eventManager;
 		
@@ -136,13 +153,17 @@ public class UserThreadMode<CmdType, ConnectKey, Visitor, UserKey, User extends 
 		this.userResourceManager = new UserResourceManager<ConnectKey, Visitor, UserKey, User>(userCenter, userResourceCenter, pool, eventManager);
 		
 		RequestFrequentFilter<CmdType, ConnectKey, Visitor, UserKey, User> userRequestFilter 
-			= new RequestFrequentFilter<CmdType, ConnectKey, Visitor, UserKey, User>( 4000, 20, 20, 
+			= new RequestFrequentFilter<CmdType, ConnectKey, Visitor, UserKey, User>( checkTime, maxCount,
 					eventManager, userResourceManager.getUserQueueResource() );
 		this.userRequestFilter = userRequestFilter;
 		userResourceCenter.addUserResource(userRequestFilter);
 		
 		userThreadModeFilter = new UserThreadModeFilter<CmdType, ConnectKey, Visitor, UserKey, User>(login, disconect, eventManager, 
 				visitorCmdMapHandler, userCmdMapHandler, userCenter, visitorRequestFilter, userRequestFilter);
+		
+		userManager = new UserManager<CmdType, ConnectKey, Visitor, UserKey, User>(
+				userThreadModeFilter, userCenter, userResourceCenter, userFlagBusiness);
+		userQueueManager = new UserQueueManager<Visitor, UserKey, User>(userResourceManager.getUserQueueResource());
 	}
 
 	/**
@@ -163,6 +184,8 @@ public class UserThreadMode<CmdType, ConnectKey, Visitor, UserKey, User extends 
 	 * @param userCmdMapHandler 用户Cmd对应处理器的Map
 	 * @param pool 线程池
 	 * @param eventManager 事件管理器
+	 * @param checkTime 用户在checkTime毫秒内最多允许maxCount次请求(详见RequestFrequentFilter类描述)
+	 * @param maxCount 用户在checkTime毫秒内最多允许maxCount次请求(详见RequestFrequentFilter类描述)
 	 */
 	@SuppressWarnings("rawtypes")
 	public UserThreadMode(
@@ -170,7 +193,10 @@ public class UserThreadMode<CmdType, ConnectKey, Visitor, UserKey, User extends 
 			Map<CmdType, IRequestHandler> visitorCmdMapHandler,
 			Map<CmdType, IRequestHandler> userCmdMapHandler,
 			LimitedUnboundedThreadPoolExecutor pool,
-			EventManager<CmdType, ConnectKey, Visitor, UserKey, User> eventManager ) {
+			EventManager<CmdType, ConnectKey, Visitor, UserKey, User> eventManager,
+			UserFlagBusiness<Visitor, UserKey, User> userFlagBusiness,
+			int checkTime,
+			int maxCount ) {
 		
 		this.eventManager = eventManager;
 		
@@ -186,13 +212,17 @@ public class UserThreadMode<CmdType, ConnectKey, Visitor, UserKey, User extends 
 		this.userResourceManager = new UserResourceManager<ConnectKey, Visitor, UserKey, User>(userCenter, userResourceCenter, pool, eventManager);
 		
 		RequestFrequentFilter<CmdType, ConnectKey, Visitor, UserKey, User> userRequestFilter 
-			= new RequestFrequentFilter<CmdType, ConnectKey, Visitor, UserKey, User>( 4000, 20, 20, 
+			= new RequestFrequentFilter<CmdType, ConnectKey, Visitor, UserKey, User>( checkTime, maxCount,
 					eventManager, userResourceManager.getUserQueueResource() );
 		this.userRequestFilter = userRequestFilter;
 		userResourceCenter.addUserResource(userRequestFilter);
 		
 		userThreadModeFilter = new UserThreadModeFilter<CmdType, ConnectKey, Visitor, UserKey, User>(login, disconect, eventManager, 
 				visitorCmdMapHandler, userCmdMapHandler, userCenter, visitorRequestFilter, userRequestFilter);
+		
+		userManager = new UserManager<CmdType, ConnectKey, Visitor, UserKey, User>(
+				userThreadModeFilter, userCenter, userResourceCenter, userFlagBusiness);
+		userQueueManager = new UserQueueManager<Visitor, UserKey, User>(userResourceManager.getUserQueueResource());
 	}
 	
 	
@@ -287,6 +317,24 @@ public class UserThreadMode<CmdType, ConnectKey, Visitor, UserKey, User extends 
 	 */
 	public UserThreadModeFilter<CmdType, ConnectKey, Visitor, UserKey, User> getUserThreadModeFilter() {
 		return userThreadModeFilter;
+	}
+
+	/**
+	 * 获得用户管理器
+	 * 
+	 * @return 用户管理器
+	 */
+	public UserManager<CmdType, ConnectKey, Visitor, UserKey, User> getUserManager() {
+		return userManager;
+	}
+
+	/**
+	 * 获得用户队列管理器
+	 * 
+	 * @return 户队列管理器
+	 */
+	public UserQueueManager<Visitor, UserKey, User> getUserQueueManager() {
+		return userQueueManager;
 	}
 	
 	

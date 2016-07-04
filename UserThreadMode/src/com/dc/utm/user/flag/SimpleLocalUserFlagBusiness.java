@@ -45,6 +45,12 @@ public class SimpleLocalUserFlagBusiness<Visitor, UserKey, User extends IBaseUse
 		userIdSet.remove(user.getUserKey());
 	}
 	
+	@Override
+	public boolean isLoginLocal(UserKey userKey) {
+		
+		return userIdSet.containsKey(userKey);
+	}
+	
 	/**
 	 * 移除登录标志位（为修复数据预留的接口）
 	 * 
@@ -64,4 +70,5 @@ public class SimpleLocalUserFlagBusiness<Visitor, UserKey, User extends IBaseUse
 		
 		return userIdSet;
 	}
+
 }

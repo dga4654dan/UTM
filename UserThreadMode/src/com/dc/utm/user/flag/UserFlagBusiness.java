@@ -90,4 +90,13 @@ public abstract class UserFlagBusiness<Visitor, UserKey, User extends IBaseUser<
 	 */
 	public abstract void removeLoginFlag(int requestId, User user, Object param);
 	
+	/**
+	 * 用户（id：userKey）是否在本服务上登录
+	 * 
+	 * eg: > SELECT 1 FROM user_login_flag WHERE user_id = #{userId} AND machine_id = #{machineId}
+	 * 
+	 * @param userKey 用户id
+	 */
+	public abstract boolean isLoginLocal(UserKey userKey);
+	
 }
